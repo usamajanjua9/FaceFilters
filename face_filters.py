@@ -36,6 +36,10 @@ brightness_factor = st.sidebar.slider("💡 Brightness", -100, 100, 0)
 glasses_image = st.sidebar.file_uploader("🕶 Upload Glasses Image (PNG with Transparency)", type=["png"])
 emoji_option = st.sidebar.selectbox("😃 Choose an Emoji to Overlay:", ("None", "😂", "😎", "😍", "🤩", "👽", "🐱"))
 
+# Image Upload Option
+st.sidebar.subheader("📷 Upload an Image")
+uploaded_image = st.sidebar.file_uploader("📂 Choose an image", type=["jpg", "jpeg", "png"])
+
 # Video Upload Option
 st.sidebar.subheader("📹 Upload a Video")
 video_file = st.sidebar.file_uploader("📂 Choose a video", type=["mp4", "avi", "mov"])
@@ -74,20 +78,17 @@ def adjust_brightness(frame, brightness_factor):
     frame = cv2.convertScaleAbs(frame, alpha=1, beta=brightness_factor)
     return frame
 
-# Webcam Image Input (for Streamlit Cloud)
-st.sidebar.subheader("📷 Capture an Image")
-image_file = st.camera_input("📸 Take a picture")
-
-if image_file is not None:
-    image = Image.open(image_file)
+# Process Uploaded Image
+if uploaded_image is not None:
+    image = Image.open(uploaded_image)
     frame = np.array(image)
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     
     frame = apply_filter(frame, filter_option, filter_intensity)
     frame = adjust_brightness(frame, brightness_factor)
-
+    
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    st.image(frame, channels="RGB", caption="Processed Image 🎭")
-    st.success("📸 Image processed successfully!")
+    st.image(frame, channels="RGB", caption="Processed Uploaded Image 🎭")
+    st.success("📸 Uploaded image processed successfully!")
 
 st.sidebar.info("🚀 Developed by Dr. Usama Arshad")

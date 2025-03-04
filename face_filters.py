@@ -49,7 +49,7 @@ def get_emoji_image(emoji_name):
     try:
         response = requests.get(emoji_urls[emoji_name], stream=True)
         if response.status_code == 200:
-            emoji_img = Image.open(response.raw).convert("RGBA")
+            emoji_img = Image.open(response.raw).convert("RGBA")  # Ensure transparency
             return emoji_img
     except Exception as e:
         st.warning(f"⚠ Error loading emoji: {e}")
@@ -112,7 +112,7 @@ def apply_filter(frame, filter_option, intensity):
     return frame
 
 
-# Function to overlay emoji image on detected faces
+# Function to overlay emoji image on detected faces (covering full face)
 def overlay_emoji(frame, emoji_option):
     if emoji_option == "None":
         return frame
@@ -127,8 +127,14 @@ def overlay_emoji(frame, emoji_option):
     faces = detector.detectMultiScale(gray, 1.1, 4)
 
     for (x, y, w, h) in faces:
-        emoji_resized = emoji_img.resize((w, h // 3))  # ✅ Removed Image.ANTIALIAS
-        pil_frame.paste(emoji_resized, (x, y), emoji_resized)
+        # ✅ Resize emoji to cover full face
+        emoji_resized = emoji_img.resize((w, h))  
+        
+        # ✅ Adjust position to fit properly
+        y_offset = max(0, y - h // 10)  
+
+        # ✅ Paste the emoji over the face, maintaining transparency
+        pil_frame.paste(emoji_resized, (x, y_offset), emoji_resized)
 
     return cv2.cvtColor(np.array(pil_frame), cv2.COLOR_RGB2BGR)
 

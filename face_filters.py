@@ -1,7 +1,7 @@
 import streamlit as st
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 import requests
 import os
 
@@ -32,27 +32,29 @@ st.sidebar.subheader("📸 Take a Picture")
 image_file = st.camera_input("Capture an Image")
 
 
-# Function to download and use an emoji-compatible font
-def get_emoji_font():
-    font_path = "NotoColorEmoji.ttf"
+# Function to fetch emoji images dynamically
+def get_emoji_image(emoji_name):
+    emoji_urls = {
+        "😂": "https://emojicdn.elk.sh/😂",
+        "😎": "https://emojicdn.elk.sh/😎",
+        "😍": "https://emojicdn.elk.sh/😍",
+        "🤩": "https://emojicdn.elk.sh/🤩",
+        "👽": "https://emojicdn.elk.sh/👽",
+        "🐱": "https://emojicdn.elk.sh/🐱"
+    }
+    
+    if emoji_name not in emoji_urls:
+        return None
 
-    if not os.path.exists(font_path):
-        try:
-            url = "https://github.com/googlefonts/noto-emoji/blob/main/fonts/NotoColorEmoji.ttf?raw=true"
-            response = requests.get(url, stream=True)
-
-            if response.status_code == 200:
-                with open(font_path, "wb") as f:
-                    f.write(response.content)
-                st.success("✅ Downloaded emoji font successfully!")
-            else:
-                st.warning("⚠ Failed to download emoji font.")
-                return None
-        except Exception as e:
-            st.warning(f"⚠ Error downloading font: {e}")
-            return None
-
-    return font_path
+    try:
+        response = requests.get(emoji_urls[emoji_name], stream=True)
+        if response.status_code == 200:
+            emoji_img = Image.open(response.raw).convert("RGBA")
+            return emoji_img
+    except Exception as e:
+        st.warning(f"⚠ Error loading emoji: {e}")
+    
+    return None
 
 
 # Function to apply filters
@@ -110,25 +112,23 @@ def apply_filter(frame, filter_option, intensity):
     return frame
 
 
-# Function to overlay emoji using PIL
+# Function to overlay emoji image on detected faces
 def overlay_emoji(frame, emoji_option):
     if emoji_option == "None":
         return frame
 
-    pil_frame = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-    draw = ImageDraw.Draw(pil_frame)
-
-    font_path = get_emoji_font()
-    if font_path:
-        font = ImageFont.truetype(font_path, 60)
-    else:
-        st.warning("⚠ Could not find an emoji-compatible font. Emojis may not render properly.")
+    emoji_img = get_emoji_image(emoji_option)
+    if emoji_img is None:
+        st.warning("⚠ Could not load emoji image.")
         return frame
 
+    pil_frame = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector.detectMultiScale(gray, 1.1, 4)
+
     for (x, y, w, h) in faces:
-        draw.text((x + int(w / 3), y + int(h / 2)), emoji_option, font=font, fill=(255, 255, 255))
+        emoji_resized = emoji_img.resize((w, h // 3), Image.ANTIALIAS)
+        pil_frame.paste(emoji_resized, (x, y), emoji_resized)
 
     return cv2.cvtColor(np.array(pil_frame), cv2.COLOR_RGB2BGR)
 

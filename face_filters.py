@@ -40,6 +40,10 @@ emoji_option = st.sidebar.selectbox("😃 Choose an Emoji to Overlay:", ("None",
 st.sidebar.subheader("📷 Upload an Image")
 uploaded_image = st.sidebar.file_uploader("📂 Choose an image", type=["jpg", "jpeg", "png"])
 
+# Webcam Capture Option
+st.sidebar.subheader("📸 Take a Picture")
+image_file = st.camera_input("Capture an Image")
+
 # Video Upload Option
 st.sidebar.subheader("📹 Upload a Video")
 video_file = st.sidebar.file_uploader("📂 Choose a video", type=["mp4", "avi", "mov"])
@@ -78,17 +82,27 @@ def adjust_brightness(frame, brightness_factor):
     frame = cv2.convertScaleAbs(frame, alpha=1, beta=brightness_factor)
     return frame
 
-# Process Uploaded Image
-if uploaded_image is not None:
-    image = Image.open(uploaded_image)
+def overlay_emoji(frame, emoji_option):
+    if emoji_option == "None":
+        return frame
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = detector.detectMultiScale(gray, 1.1, 4)
+    for (x, y, w, h) in faces:
+        cv2.putText(frame, emoji_option, (x + int(w / 3), y + int(h / 2)), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5, cv2.LINE_AA)
+    return frame
+
+# Process Uploaded or Captured Image
+if uploaded_image or image_file:
+    image = Image.open(uploaded_image) if uploaded_image else Image.open(image_file)
     frame = np.array(image)
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     
     frame = apply_filter(frame, filter_option, filter_intensity)
     frame = adjust_brightness(frame, brightness_factor)
+    frame = overlay_emoji(frame, emoji_option)
     
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    st.image(frame, channels="RGB", caption="Processed Uploaded Image 🎭")
-    st.success("📸 Uploaded image processed successfully!")
+    st.image(frame, channels="RGB", caption="Processed Image 🎭")
+    st.success("📸 Image processed successfully!")
 
 st.sidebar.info("🚀 Developed by Dr. Usama Arshad")

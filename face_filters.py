@@ -2,7 +2,6 @@ import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
-import time
 
 # Customizing Streamlit UI
 st.set_page_config(page_title="Webcam Face Detection & Filters", page_icon="📷", layout="wide")
@@ -10,6 +9,12 @@ st.title("📷 Webcam Face Detection, Filters & Glasses Overlay")
 
 # Load Haarcascade for Face Detection
 detector = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+# Sidebar Options
+st.sidebar.header("🔧 Options")
+filter_option = st.sidebar.radio("Choose a Filter:", ("No Filter", "Grayscale", "Cartoon", "Blur", "Edge Detection", "Pencil Sketch", "Sepia", "Invert Colors", "Emboss", "Sharpen", "HSV"))
+
+glasses_image = st.sidebar.file_uploader("Upload Glasses Image (PNG with Transparency)", type=["png"])
 
 def overlay_glasses(frame, glasses):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -28,12 +33,6 @@ def overlay_glasses(frame, glasses):
                         frame[gy + i, gx + j] = glasses_resized[i, j, :3]
     
     return frame
-
-# Sidebar Options
-st.sidebar.header("🔧 Options")
-filter_option = st.sidebar.radio("Choose a Filter:", ("No Filter", "Grayscale", "Cartoon", "Blur", "Edge Detection", "Pencil Sketch", "Sepia", "Invert Colors", "Emboss", "Sharpen", "HSV"))
-
-glasses_image = st.sidebar.file_uploader("Upload Glasses Image (PNG with Transparency)", type=["png"])
 
 def apply_filter(frame, filter_option):
     if filter_option == "Grayscale":
@@ -65,32 +64,23 @@ def apply_filter(frame, filter_option):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     return frame
 
-# Webcam Stream
-st.sidebar.subheader("📷 Webcam Controls")
-run = st.sidebar.button("Start Camera")
-stop = st.sidebar.button("Stop Camera")
-snapshot = st.sidebar.button("Take Snapshot")
-snapshot_holder = st.empty()
+# Webcam Image Input (for Streamlit Cloud)
+st.sidebar.subheader("📷 Capture an Image")
+image_file = st.camera_input("Take a picture")
 
-if run:
-    cap = cv2.VideoCapture(0)
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            st.warning("⚠ Unable to access webcam.")
-            break
-        frame = apply_filter(frame, filter_option)
-        if glasses_image is not None:
-            glasses = Image.open(glasses_image)
-            frame = overlay_glasses(frame, glasses)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        st.image(frame, channels="RGB")
-        
-        if snapshot:
-            snapshot_holder.image(frame, caption="Snapshot Taken", use_column_width=True)
-            st.success("📸 Snapshot saved!")
-        
-        time.sleep(0.05)
-    cap.release()
+if image_file is not None:
+    image = Image.open(image_file)
+    frame = np.array(image)
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    
+    frame = apply_filter(frame, filter_option)
+    
+    if glasses_image is not None:
+        glasses = Image.open(glasses_image)
+        frame = overlay_glasses(frame, glasses)
+    
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    st.image(frame, channels="RGB", caption="Processed Image")
+    st.success("📸 Image processed successfully!")
 
 st.sidebar.info("🚀 Developed by Dr. Usama Arshad")

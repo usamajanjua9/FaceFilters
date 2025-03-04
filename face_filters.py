@@ -127,7 +127,7 @@ def overlay_emoji(frame, emoji_option):
     faces = detector.detectMultiScale(gray, 1.1, 4)
 
     for (x, y, w, h) in faces:
-        emoji_resized = emoji_img.resize((w, h // 3), Image.ANTIALIAS)
+        emoji_resized = emoji_img.resize((w, h // 3))  # ✅ Removed Image.ANTIALIAS
         pil_frame.paste(emoji_resized, (x, y), emoji_resized)
 
     return cv2.cvtColor(np.array(pil_frame), cv2.COLOR_RGB2BGR)

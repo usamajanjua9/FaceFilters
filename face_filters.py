@@ -2,10 +2,9 @@ import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-import tempfile
 import os
 
-# Customizing Streamlit UI
+# Set up Streamlit UI
 st.set_page_config(page_title="Webcam Face Detection & Filters", page_icon="📷", layout="wide")
 st.title("📷 Webcam Face Detection, Filters, Emojis & Glasses Overlay 🎭")
 
@@ -45,24 +44,39 @@ st.sidebar.subheader("📷 Upload an Image")
 uploaded_image = st.sidebar.file_uploader("📂 Choose an image", type=["jpg", "jpeg", "png"])
 
 # Webcam Capture Option
-#st.sidebar.subheader("📸 Take a Picture")
+st.sidebar.subheader("📸 Take a Picture")
 image_file = st.camera_input("Capture an Image")
 
 # Video Upload Option
 st.sidebar.subheader("📹 Upload a Video")
 video_file = st.sidebar.file_uploader("📂 Choose a video", type=["mp4", "avi", "mov"])
 
+# Function to get a valid emoji-supporting font
+def get_emoji_font():
+    possible_fonts = [
+        "/usr/share/fonts/noto/NotoColorEmoji.ttf",  # Linux
+        "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",  # Linux (alternate)
+        "/System/Library/Fonts/Supplemental/AppleColorEmoji.ttc",  # macOS
+        "C:/Windows/Fonts/seguiemj.ttf",  # Windows
+    ]
 
+    for font_path in possible_fonts:
+        if os.path.exists(font_path):
+            return font_path
+
+    st.warning("⚠ Could not find an emoji-compatible font. Emojis may not render properly.")
+    return None  # No valid font found
+
+# Function to apply image filters
 def apply_filter(frame, filter_option, intensity):
     if filter_option == "Grayscale":
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)  # Fix single-channel issue
 
     elif filter_option == "Cartoon":
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Fix: Convert to grayscale
-        gray = cv2.medianBlur(gray, intensity)  # Median blur applied correctly
-        edges = cv2.adaptiveThreshold(gray, 255, 
-                                      cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 9)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+        gray = cv2.medianBlur(gray, intensity)  # Fix for medianBlur()
+        edges = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 9)
         color = cv2.bilateralFilter(frame, intensity * 2, 250, 250)
         frame = cv2.bitwise_and(color, color, mask=edges)
 
@@ -108,11 +122,7 @@ def apply_filter(frame, filter_option, intensity):
 
     return frame
 
-
-def adjust_brightness(frame, brightness_factor):
-    return cv2.convertScaleAbs(frame, alpha=1, beta=brightness_factor)
-
-
+# Function to overlay emoji using PIL
 def overlay_emoji(frame, emoji_option):
     if emoji_option == "None":
         return frame
@@ -121,53 +131,28 @@ def overlay_emoji(frame, emoji_option):
     pil_frame = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(pil_frame)
 
-    # Load font
-    try:
-        font = ImageFont.truetype("arial.ttf", 60)  # Adjust size as needed
-    except:
-        st.warning("⚠ Could not load font. Emojis may not display correctly.")
-        font = None
+    # Get emoji-compatible font
+    font_path = get_emoji_font()
+    if font_path:
+        font = ImageFont.truetype(font_path, 60)  # Adjust size
+    else:
+        return frame  # No font available, return unmodified image
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector.detectMultiScale(gray, 1.1, 4)
     for (x, y, w, h) in faces:
-        if font:
-            draw.text((x + int(w / 3), y + int(h / 2)), emoji_option, font=font, fill=(255, 255, 255))
+        draw.text((x + int(w / 3), y + int(h / 2)), emoji_option, font=font, fill=(255, 255, 255))
 
     return cv2.cvtColor(np.array(pil_frame), cv2.COLOR_RGB2BGR)
 
-
-def overlay_glasses(frame, glasses_image):
-    if glasses_image is None:
-        return frame
-
-    glasses = Image.open(glasses_image).convert("RGBA")
-    glasses_np = np.array(glasses)
-
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = detector.detectMultiScale(gray, 1.1, 4)
-
-    for (x, y, w, h) in faces:
-        glasses_resized = cv2.resize(glasses_np, (w, int(h / 3)))
-        y_offset = y + int(h / 4)
-
-        for i in range(glasses_resized.shape[0]):
-            for j in range(glasses_resized.shape[1]):
-                if glasses_resized[i, j, 3] > 0:  # If not transparent
-                    frame[y_offset + i, x + j] = glasses_resized[i, j, :3]
-
-    return frame
-
-
+# Process Uploaded or Captured Image
 if uploaded_image or image_file:
     image = Image.open(uploaded_image) if uploaded_image else Image.open(image_file)
     frame = np.array(image)
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
     frame = apply_filter(frame, filter_option, filter_intensity)
-    frame = adjust_brightness(frame, brightness_factor)
     frame = overlay_emoji(frame, emoji_option)
-    frame = overlay_glasses(frame, glasses_image)
 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     st.image(frame, channels="RGB", caption="Processed Image 🎭")

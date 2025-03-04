@@ -45,7 +45,7 @@ st.sidebar.subheader("📷 Upload an Image")
 uploaded_image = st.sidebar.file_uploader("📂 Choose an image", type=["jpg", "jpeg", "png"])
 
 # Webcam Capture Option
-st.sidebar.subheader("📸 Take a Picture")
+#st.sidebar.subheader("📸 Take a Picture")
 image_file = st.camera_input("Capture an Image")
 
 # Video Upload Option

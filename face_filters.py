@@ -1,7 +1,7 @@
 import streamlit as st
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import tempfile
 import os
 
@@ -59,8 +59,9 @@ def apply_filter(frame, filter_option, intensity):
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)  # Fix single-channel issue
 
     elif filter_option == "Cartoon":
-        gray = cv2.medianBlur(frame, intensity)
-        edges = cv2.adaptiveThreshold(cv2.cvtColor(gray, cv2.COLOR_BGR2GRAY), 255, 
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Fix: Convert to grayscale
+        gray = cv2.medianBlur(gray, intensity)  # Median blur applied correctly
+        edges = cv2.adaptiveThreshold(gray, 255, 
                                       cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 9)
         color = cv2.bilateralFilter(frame, intensity * 2, 250, 250)
         frame = cv2.bitwise_and(color, color, mask=edges)
@@ -115,20 +116,32 @@ def adjust_brightness(frame, brightness_factor):
 def overlay_emoji(frame, emoji_option):
     if emoji_option == "None":
         return frame
+
+    # Convert OpenCV image to PIL format
+    pil_frame = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(pil_frame)
+
+    # Load font
+    try:
+        font = ImageFont.truetype("arial.ttf", 60)  # Adjust size as needed
+    except:
+        st.warning("⚠ Could not load font. Emojis may not display correctly.")
+        font = None
+
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector.detectMultiScale(gray, 1.1, 4)
     for (x, y, w, h) in faces:
-        cv2.putText(frame, emoji_option, (x + int(w / 3), y + int(h / 2)), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5, cv2.LINE_AA)
-    return frame
+        if font:
+            draw.text((x + int(w / 3), y + int(h / 2)), emoji_option, font=font, fill=(255, 255, 255))
+
+    return cv2.cvtColor(np.array(pil_frame), cv2.COLOR_RGB2BGR)
 
 
 def overlay_glasses(frame, glasses_image):
     if glasses_image is None:
         return frame
 
-    glasses = Image.open(glasses_image)
-    glasses = glasses.convert("RGBA")
+    glasses = Image.open(glasses_image).convert("RGBA")
     glasses_np = np.array(glasses)
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -146,7 +159,6 @@ def overlay_glasses(frame, glasses_image):
     return frame
 
 
-# Process Uploaded or Captured Image
 if uploaded_image or image_file:
     image = Image.open(uploaded_image) if uploaded_image else Image.open(image_file)
     frame = np.array(image)

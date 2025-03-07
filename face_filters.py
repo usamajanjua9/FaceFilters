@@ -7,6 +7,15 @@ import os
 
 # Set up Streamlit UI
 st.set_page_config(page_title="Webcam Face Detection & Filters", page_icon="📷", layout="wide")
+
+st.markdown("""
+    <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("📷 Webcam Face Detection, Filters, Emojis & Glasses Overlay 🎭")
 
 # Load Haarcascade for Face Detection

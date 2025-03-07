@@ -2,7 +2,7 @@
 
 This Streamlit application provides **real-time face detection** using a webcam, allows users to apply **various filters**, and supports **overlaying custom glasses images** on detected faces.
 
-[Run](https://stockportfolioanalyzer.streamlit.app/)!
+[Run](https://facefilters-kzb59k48rotapp7fddhmpyz.streamlit.app/)!
 
 ## Features
 
